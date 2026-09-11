@@ -8,18 +8,31 @@ public final class PracticeViewModel {
     public private(set) var correctCount = 0
     public private(set) var attemptCount = 0
 
-    private let scenarios: [PracticeScenario]
+    private let scenarios: [PracticeScenario]?
     private var scenarioIndex = 0
+    @ObservationIgnored private var generator: PracticeScenarioGenerator?
     @ObservationIgnored private var currentAnalysis: PostflopAnalysis?
     @ObservationIgnored private var correctChoice: PracticeChoice?
 
-    public init(scenarios: [PracticeScenario] = PracticeScenarioCatalog.faceCardDrills) {
+    public convenience init() {
+        self.init(seed: UInt64.random(in: .min ... .max))
+    }
+
+    /// A repeatable stream from the real generator, useful for reproducible drills.
+    public init(seed: UInt64) {
+        scenarios = nil
+        generator = PracticeScenarioGenerator(seed: seed)
+        loadCurrentScenario()
+    }
+
+    public init(scenarios: [PracticeScenario]) {
         self.scenarios = scenarios
         loadCurrentScenario()
     }
 
     public var scenarioNumber: Int { currentScenario == nil ? 0 : scenarioIndex + 1 }
-    public var scenarioCount: Int { scenarios.count }
+    /// Nil means an unlimited generated stream; injected catalogs have a count.
+    public var scenarioCount: Int? { scenarios?.count }
     public var canAnswer: Bool {
         currentScenario != nil && currentAnalysis != nil && correctChoice != nil &&
             feedback == nil && errorMessage == nil
@@ -53,8 +66,13 @@ public final class PracticeViewModel {
     }
 
     public func nextScenario() {
-        guard feedback != nil, !scenarios.isEmpty else { return }
-        scenarioIndex = scenarioIndex + 1 == scenarios.count ? 0 : scenarioIndex + 1
+        guard feedback != nil else { return }
+        if let scenarios {
+            guard !scenarios.isEmpty else { return }
+            scenarioIndex = scenarioIndex + 1 == scenarios.count ? 0 : scenarioIndex + 1
+        } else {
+            scenarioIndex += 1
+        }
         loadCurrentScenario()
     }
 
@@ -66,51 +84,24 @@ public final class PracticeViewModel {
         feedback = nil
         errorMessage = nil
 
-        guard !scenarios.isEmpty else {
-            errorMessage = "No practice scenarios are available."
-            return
-        }
-
-        let scenario = scenarios[scenarioIndex]
         do {
-            guard scenario.holeCards.count == 2, scenario.flop.count == 3 else {
+            let prepared: PreparedPracticeScenario
+            if let scenarios {
+                guard !scenarios.isEmpty else {
+                    errorMessage = "No practice scenarios are available."
+                    return
+                }
+                prepared = try PreparedPracticeScenario(scenarios[scenarioIndex])
+            } else if let generated = try generator?.next() {
+                prepared = generated
+            } else {
                 throw StrategyInputError.invalidBettingState(
-                    "A flop drill needs exactly two hole cards and three community cards."
+                    "The practice generator is unavailable."
                 )
             }
-            _ = try Deck.remaining(excluding: scenario.holeCards + scenario.flop)
-            try scenario.betting.validate()
-            guard scenario.betting.pot > 0,
-                  scenario.betting.heroStack > 0,
-                  scenario.betting.effectiveStack > 0 else {
-                throw StrategyInputError.invalidBettingState(
-                    "A drill needs a positive pot and chips available in the effective stack."
-                )
-            }
-
-            let analysis = try PostflopHeuristicEngine.analyze(
-                holeCards: scenario.holeCards, board: scenario.flop,
-                betting: scenario.betting,
-                isPreflopAggressor: scenario.isPreflopAggressor
-            )
-            let mappedChoice: PracticeChoice
-            switch (analysis.recommendation.action, scenario.betting.amountToCall == 0) {
-            case (.bet, true), (.allIn, true):
-                // An all-in is an opening Bet only when no wager is outstanding.
-                mappedChoice = .bet
-            case (.check, true):
-                mappedChoice = .check
-            case (.fold, false):
-                mappedChoice = .fold
-            default:
-                throw StrategyInputError.invalidBettingState(
-                    "This drill needs an action outside the Bet, Check and Fold choices."
-                )
-            }
-
-            currentAnalysis = analysis
-            correctChoice = mappedChoice
-            currentScenario = scenario
+            currentAnalysis = prepared.analysis
+            correctChoice = prepared.choice
+            currentScenario = prepared.scenario
         } catch {
             errorMessage = "Practice scenario unavailable. \(error)"
         }

@@ -8,10 +8,19 @@ struct PokerAssistantApp: App {
     private static let uiTestSuiteName = "com.riverline.pokerassistant.uitests"
 
     @State private var session: PokerSession
+    private let practiceSeed: UInt64?
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
         let defaults: UserDefaults
+        // UI tests replay the real generator; ordinary sessions use system randomness.
+        if arguments.contains("--ui-testing"),
+           let seedFlag = arguments.firstIndex(of: "--practice-seed"),
+           arguments.indices.contains(seedFlag + 1) {
+            practiceSeed = UInt64(arguments[seedFlag + 1])
+        } else {
+            practiceSeed = nil
+        }
 
         if arguments.contains("--ui-testing") {
             guard let testDefaults = UserDefaults(suiteName: Self.uiTestSuiteName) else {
@@ -30,7 +39,7 @@ struct PokerAssistantApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PokerRootView(session: session)
+            PokerRootView(session: session, practiceSeed: practiceSeed)
                 .preferredColorScheme(.dark)
         }
     }

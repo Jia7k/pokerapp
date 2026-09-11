@@ -49,8 +49,9 @@ The interface uses system typography and native SwiftUI controls, supports Dynam
 | `Sources/PokerCore/BettingState.swift` | Stack coverage, callable pot, legal wager sizing and recommendation values |
 | `Sources/PokerCore/PostflopHeuristicEngine.swift` | Board texture, hero-owned made hands and ordered action rules |
 | `Sources/PokerCore/PokerViewModel.swift` | Main-actor observable inputs, validated card slots and derived analysis |
-| `Sources/PokerCore/PracticeScenario.swift` | Ten curated flop inputs using Card, Deck and the existing engine |
-| `Sources/PokerCore/PracticeViewModel.swift` | One-shot grading, feedback, cyclic progression and session score |
+| `Sources/PokerCore/PracticeScenario.swift` | Immutable drill inputs and optional curated fixtures |
+| `Sources/PokerCore/PracticeScenarioGenerator.swift` | Seedable, on-demand randomized face-card drills using Deck and the existing engine |
+| `Sources/PokerCore/PracticeViewModel.swift` | One-shot grading, feedback, unlimited progression and session score |
 
 ## Run and integrate
 
@@ -74,13 +75,13 @@ Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode
 
 ## Phase 4: practice
 
-Open **Practice** to work through ten flop drills with two face cards. The first deals **K♠ Q♠** on **A♥ 8♦ 2♣**, a pot of 100 and an effective stack of 400. Use the cards, pot, stack, amount to call and preflop-aggressor context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** advances through the bank and cycles after the tenth hand.
+Open **Practice** for unlimited randomized flop drills with two face cards. Each drill shuffles J/Q/K hole cards and draws a three-card flop from the remaining deck, then varies the pot, stacks, amount to call and preflop initiative. Use that context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** generates another drill and keeps increasing the counter; there is no ten-hand loop or session limit.
 
 Practice fits on one screen without scrolling. Cards, typography and spacing adapt to the available room; landscape uses two columns. Action buttons retain a minimum 44-point height, and full card and feedback descriptions remain available to VoiceOver.
 
 The score counts each displayed drill once and survives tab switches during the app session. It resets when the app restarts. Practice never replaces the live table's cards, stacks, bankroll or saved session.
 
-`PracticeViewModel` evaluates each input with `PostflopHeuristicEngine`. Scenario definitions contain no answer table. `Card` provides card identities and `Deck.remaining(excluding:)` validates uniqueness. Opening all-ins count as **Bet**; Call, Raise and all-in call/raise recommendations are excluded from this three-choice bank. Fold drills explicitly show an outstanding bet; selecting Check or Bet there is graded incorrect with a legality explanation. Sizing is taught in feedback, rather than scored as a separate input.
+Each generated input is evaluated with `PostflopHeuristicEngine` before presentation. Scenario definitions contain no answer table. `Card` provides card identities and `Deck` provides exclusion, shuffle and draw. Opening all-ins count as **Bet**; Call, Raise and all-in call/raise recommendations are excluded from this three-choice mode. Fold drills explicitly show an outstanding bet; selecting Check or Bet there is graded incorrect with a legality explanation. Sizing is taught in feedback, rather than scored as a separate input.
 
 ```swift
 import SwiftUI
@@ -97,7 +98,9 @@ struct TrainingScreen: View {
 }
 ```
 
-Inject an array through `PracticeViewModel(scenarios:)` to provide other drills. Empty, malformed or unsupported scenarios show an unavailable state without awarding points or retaining stale advice. This module tests agreement with the app's simplified postflop heuristics; its grades are not solver-derived GTO judgments or opponent-range equity estimates.
+Use `PracticeViewModel(seed: 16)` to replay a generated session for testing. Normal sessions use system randomness. Inject an array through `PracticeViewModel(scenarios:)` for a curated sequence that cycles explicitly; the original ten drills remain available as fixtures, including K♠ Q♠ on A♥ 8♦ 2♣. Empty, malformed or unsupported fixtures show an unavailable state without awarding points or retaining stale advice. This module tests agreement with the app's simplified postflop heuristics; its grades are not solver-derived GTO judgments or opponent-range equity estimates.
+
+The current native verification target is **iPhone 16 Pro**, in portrait and landscape, including the largest system text setting.
 
 See the [Phase 4 delivery notes](docs/phase-four-delivery.md) for verification results and simulator screenshots.
 

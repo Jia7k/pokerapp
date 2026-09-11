@@ -249,7 +249,7 @@ final class PracticeViewModelTests: XCTestCase {
             XCTAssertEqual(Set(catalog.map(\.id)).count, catalog.count)
             XCTAssertEqual(catalog.first?.holeCards, cards("Ks Qs"))
             let expected: [PracticeChoice] = [.bet, .bet, .bet, .check, .check, .bet, .check, .fold, .bet, .fold]
-            let model = PracticeViewModel()
+            let model = PracticeViewModel(scenarios: catalog)
             for (index, scenario) in catalog.enumerated() {
                 XCTAssertEqual(scenario.holeCards.count, 2)
                 XCTAssertTrue(scenario.holeCards.allSatisfy { [.jack, .queen, .king].contains($0.rank) })
