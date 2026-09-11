@@ -103,7 +103,7 @@ final class PokerPracticeUITests: XCTestCase {
         var pots = Set<String>()
         var capturedFacingBet = false
         for index in 0..<12 {
-            assertPracticeLabel("Flop \(index + 1)", id: "practice.progress")
+            assertPracticeLabel("Flop", id: "practice.progress")
             let deal = ["practice.hole.0", "practice.hole.1", "practice.flop.0",
                         "practice.flop.1", "practice.flop.2"].map { element($0).label }.joined(separator: "|")
             XCTAssertTrue(deals.insert(deal).inserted, "Seeded generated deals must not loop through the old catalog")
@@ -121,7 +121,7 @@ final class PokerPracticeUITests: XCTestCase {
             }
             tapPracticeButton("practice.next")
         }
-        XCTAssertEqual(element("practice.progress").label, "Flop 13")
+        XCTAssertEqual(element("practice.progress").label, "Flop")
         XCTAssertEqual(element("practice.score").label, "Correct: 1/12")
         XCTAssertGreaterThan(pots.count, 1)
         XCTAssertTrue(capturedFacingBet)

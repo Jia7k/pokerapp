@@ -20,7 +20,7 @@ The requested Bet / Check / Fold interface includes checked-to bets, opening all
 
 `Sources/PokerUI/PracticeView.swift` reuses the casino palette, card faces and number formatting. Before submission, it shows only the drill inputs. After submission, it replaces the action buttons with CORRECT/INCORRECT, recommended sizing, an engine-derived explanation, board texture, SPR and Next Scenario.
 
-`Sources/PokerUI/PokerRootView.swift` owns the practice model separately from `PokerSession`. Switching tabs preserves the current drill and score; restarting the app begins a fresh practice session. Generated progress shows Flop 1, Flop 2 and so on without a total or reset after ten. The app accepts a deterministic practice seed only when launched in UI-test mode.
+`Sources/PokerUI/PokerRootView.swift` owns the practice model separately from `PokerSession`. Switching tabs preserves the current drill and score; restarting the app begins a fresh practice session. The community-card heading is simply FLOP, with no drill number or total. The app accepts a deterministic practice seed only when launched in UI-test mode.
 
 Following the requested layout refinement, Practice uses a fixed canvas without a scroll view. Geometry scales the cards, fonts and spacing; portrait stacks the compact context and answer panels, while landscape places them side by side. Controls retain at least 44-point heights. Typography growth is bounded to fit the screen, with complete card and feedback descriptions retained for VoiceOver.
 
@@ -28,17 +28,16 @@ Following the requested layout refinement, Practice uses a fixed canvas without 
 
 On 2026-09-11, **138 release unit tests passed**, including the exhaustive five-card evaluator audit and 21 practice tests. Seven new generator tests cover a 160-deal batch, all three answers and board textures, seeded replay/divergence, valid cards and betting states, checked-to fallback, progression beyond ten, and guarded scoring. Independent code review found no actionable defects.
 
-**All four native Practice UI tests passed on iPhone 16 Pro**, using Xcode 26.6 and iOS Simulator 26.5. They cover correct/incorrect grading, score retention across tabs, live-card isolation, landscape, and twelve generated drills at the largest system text setting. The final drill counter reaches Flop 13 with the expected score. All cards, metrics, actions and full explanations stay above the tab bar without scrolling, with buttons at least 44 points tall. Exported portrait and landscape screenshots were visually inspected. No other device model was tested for this refinement.
+**All four native Practice UI tests passed on iPhone 16 Pro**, using Xcode 26.6 and iOS Simulator 26.5. They cover correct/incorrect grading, score retention across tabs, live-card isolation, landscape, and twelve generated drills at the largest system text setting. The session advances beyond twelve drills with the expected score. All cards, metrics, actions and full explanations stay above the tab bar without scrolling, with buttons at least 44 points tall. Exported portrait and landscape screenshots were visually inspected. No other device model was tested for this refinement.
 
 ### iPhone 16 Pro screenshots
 
+After removing the visible and VoiceOver drill counter, the twelve-drill UI test was rerun on iPhone 16 Pro and passed. These screenshots show the plain FLOP heading.
+
 | Screen | Preview |
 | --- | --- |
-| Generated question | [Question](screenshots/practice-16pro-question.png) |
-| Correct fold | [Result](screenshots/practice-16pro-correct.png) |
 | Largest system text | [Choices](screenshots/practice-16pro-accessibility-choices.png), [long feedback](screenshots/practice-16pro-long-feedback.png) |
 | Generated straight and value bet | [Sizing feedback](screenshots/practice-16pro-value-bet.png) |
-| Landscape | [Question](screenshots/practice-16pro-landscape-question.png), [feedback](screenshots/practice-16pro-landscape-feedback.png) |
 
 ## Earlier verification
 

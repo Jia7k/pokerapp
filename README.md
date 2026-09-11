@@ -75,7 +75,7 @@ Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode
 
 ## Phase 4: practice
 
-Open **Practice** for unlimited randomized flop drills with two face cards. Each drill shuffles J/Q/K hole cards and draws a three-card flop from the remaining deck, then varies the pot, stacks, amount to call and preflop initiative. Use that context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** generates another drill and keeps increasing the counter; there is no ten-hand loop or session limit.
+Open **Practice** for unlimited randomized flop drills with two face cards. Each drill shuffles J/Q/K hole cards and draws a three-card flop from the remaining deck, then varies the pot, stacks, amount to call and preflop initiative. Use that context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** generates another drill; the heading simply reads **FLOP**, with no drill counter, ten-hand loop or session limit.
 
 Practice fits on one screen without scrolling. Cards, typography and spacing adapt to the available room; landscape uses two columns. Action buttons retain a minimum 44-point height, and full card and feedback descriptions remain available to VoiceOver.
 

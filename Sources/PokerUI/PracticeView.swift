@@ -135,9 +135,9 @@ import PokerCore
                 Text("YOUR CARDS")
                     .foregroundStyle(PokerTheme.muted)
             } else {
-                Text(progressLabel.uppercased())
+                Text("FLOP")
                     .foregroundStyle(PokerTheme.gold)
-                    .accessibilityLabel(progressLabel)
+                    .accessibilityLabel("Flop")
                     .accessibilityIdentifier("practice.progress")
                     .accessibilityAddTraits(.isHeader)
                     .accessibilityFocused($accessibilityFocus, equals: .progress)
@@ -340,13 +340,6 @@ import PokerCore
         case .raise(let amount): "Raise to \(PokerFormat.chips(amount)) chips"
         case .noAction: "No action"
         }
-    }
-
-    private var progressLabel: String {
-        if let count = model.scenarioCount {
-            return "Flop \(model.scenarioNumber) of \(count)"
-        }
-        return "Flop \(model.scenarioNumber)"
     }
 
     private enum PracticeFocus: Hashable { case progress, result }
