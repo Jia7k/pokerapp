@@ -1,6 +1,6 @@
 # Riverline — Offline Poker Assistant
 
-A native SwiftUI Texas Hold’em assistant with an offline Swift engine, hardcoded preflop ranges, postflop heuristics, card selection, table setup and saved sessions. All three phases are implemented. There are no external packages, APIs, accounts, analytics, downloaded assets or network calls.
+A native SwiftUI Texas Hold’em assistant with an offline Swift engine, hardcoded preflop ranges, postflop heuristics, card selection, table setup, saved sessions and face-card practice drills. There are no external packages, APIs, accounts, analytics, downloaded assets or network calls.
 
 Requires Swift 6 / Xcode 16 or later. The iPhone/iPad app targets iOS 17+. Portable engine and session tests also run on macOS 14+.
 
@@ -20,7 +20,9 @@ Session values and cards save locally with `UserDefaults`; restored cards are va
 
 | File | Responsibility |
 | --- | --- |
+| `Sources/PokerUI/PokerRootView.swift` | Table and Practice tabs with independent state |
 | `Sources/PokerUI/PokerDashboardView.swift` | Main dashboard, live pot/call input and strategy controls |
+| `Sources/PokerUI/PracticeView.swift` | Face-card quiz, instant grading, explanation and score |
 | `Sources/PokerUI/CardTableView.swift` | Hole, flop, turn and river card slots |
 | `Sources/PokerUI/CardSelectorView.swift` | Suit/rank picker, duplicate prevention and street progression |
 | `Sources/PokerUI/ActionRecommendationView.swift` | Prominent action, sizing and expandable reasoning |
@@ -47,6 +49,8 @@ The interface uses system typography and native SwiftUI controls, supports Dynam
 | `Sources/PokerCore/BettingState.swift` | Stack coverage, callable pot, legal wager sizing and recommendation values |
 | `Sources/PokerCore/PostflopHeuristicEngine.swift` | Board texture, hero-owned made hands and ordered action rules |
 | `Sources/PokerCore/PokerViewModel.swift` | Main-actor observable inputs, validated card slots and derived analysis |
+| `Sources/PokerCore/PracticeScenario.swift` | Ten curated flop inputs using Card, Deck and the existing engine |
+| `Sources/PokerCore/PracticeViewModel.swift` | One-shot grading, feedback, cyclic progression and session score |
 
 ## Run and integrate
 
@@ -66,7 +70,34 @@ That audit checks all **2,598,960** five-card combinations, all nine category to
 
 To integrate elsewhere, add this folder as a local Swift package dependency, select `PokerCore` for the engine or `PokerUI` for the native views, and import the selected product. The included app already uses this local package.
 
-Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode scheme. They exercise card selection, duplicate blocking, live odds/advice, invalid input, relaunch persistence, setup, undo and accessibility text sizes.
+Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode scheme. They exercise card selection, duplicate blocking, live odds/advice, invalid input, relaunch persistence, setup, undo, practice grading, independent tab state and accessibility text sizes.
+
+## Phase 4: practice
+
+Open **Practice** to work through ten flop drills with two face cards. The first deals **K♠ Q♠** on **A♥ 8♦ 2♣**, a pot of 100 and an effective stack of 400. Use the cards, pot, stack, amount to call and preflop-aggressor context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** advances through the bank and cycles after the tenth hand.
+
+The score counts each displayed drill once and survives tab switches during the app session. It resets when the app restarts. Practice never replaces the live table's cards, stacks, bankroll or saved session.
+
+`PracticeViewModel` evaluates each input with `PostflopHeuristicEngine`. Scenario definitions contain no answer table. `Card` provides card identities and `Deck.remaining(excluding:)` validates uniqueness. Opening all-ins count as **Bet**; Call, Raise and all-in call/raise recommendations are excluded from this three-choice bank. Fold drills explicitly show an outstanding bet; selecting Check or Bet there is graded incorrect with a legality explanation. Sizing is taught in feedback, rather than scored as a separate input.
+
+```swift
+import SwiftUI
+import PokerCore
+import PokerUI
+
+@MainActor
+struct TrainingScreen: View {
+    @State private var practice = PracticeViewModel()
+
+    var body: some View {
+        PracticeView(model: practice)
+    }
+}
+```
+
+Inject an array through `PracticeViewModel(scenarios:)` to provide other drills. Empty, malformed or unsupported scenarios show an unavailable state without awarding points or retaining stale advice. This module tests agreement with the app's simplified postflop heuristics; its grades are not solver-derived GTO judgments or opponent-range equity estimates.
+
+See the [Phase 4 delivery notes](docs/phase-four-delivery.md) for verification results and simulator screenshots.
 
 ## Example
 

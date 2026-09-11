@@ -30,7 +30,7 @@ struct PokerAssistantApp: App {
 
     var body: some Scene {
         WindowGroup {
-            PokerDashboardView(session: session)
+            PokerRootView(session: session)
                 .preferredColorScheme(.dark)
         }
     }

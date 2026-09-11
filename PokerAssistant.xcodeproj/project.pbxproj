@@ -10,6 +10,7 @@
 		18FA4E9D3E01973C75BCC4A4 /* PokerUI in Frameworks */ = {isa = PBXBuildFile; productRef = 9059AF3F671D83D1B58AFC3D /* PokerUI */; };
 		2CA8121B25A540733BC1888B /* PokerAssistantApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FFC6B1B2D3A5029F97FE677 /* PokerAssistantApp.swift */; };
 		B504D5DEC5E9B31AC77B9099 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A8E54F4FC60B9D12019709F9 /* Assets.xcassets */; };
+		FCDF9C82164A5D550ACAD1C5 /* PokerPracticeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2CF3B0034B6AF38F1203C58 /* PokerPracticeUITests.swift */; };
 		FEB86519727158317640005B /* PokerAssistantUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D695C8F2C3D40ED6371DA03A /* PokerAssistantUITests.swift */; };
 /* End PBXBuildFile section */
 
@@ -28,6 +29,7 @@
 		3FFC6B1B2D3A5029F97FE677 /* PokerAssistantApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAssistantApp.swift; sourceTree = "<group>"; };
 		A861E2EB2EBAAA6D66A85769 /* PokerAssistant.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = PokerAssistant.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A8E54F4FC60B9D12019709F9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		D2CF3B0034B6AF38F1203C58 /* PokerPracticeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerPracticeUITests.swift; sourceTree = "<group>"; };
 		D695C8F2C3D40ED6371DA03A /* PokerAssistantUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PokerAssistantUITests.swift; sourceTree = "<group>"; };
 		EF0B50789EC9E732162E6037 /* PokerAssistantUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = PokerAssistantUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -66,6 +68,7 @@
 			isa = PBXGroup;
 			children = (
 				D695C8F2C3D40ED6371DA03A /* PokerAssistantUITests.swift */,
+				D2CF3B0034B6AF38F1203C58 /* PokerPracticeUITests.swift */,
 			);
 			path = UITests;
 			sourceTree = "<group>";
@@ -197,6 +200,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				FEB86519727158317640005B /* PokerAssistantUITests.swift in Sources */,
+				FCDF9C82164A5D550ACAD1C5 /* PokerPracticeUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

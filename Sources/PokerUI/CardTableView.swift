@@ -131,7 +131,7 @@ import PokerCore
     }
 }
 
-private struct PlayingCardFace: View {
+struct PlayingCardFace: View {
     let card: Card?
     let width: CGFloat
     let height: CGFloat
