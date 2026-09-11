@@ -89,7 +89,7 @@ import PokerCore
             .font(.system(size: layout.captionFont))
             .foregroundStyle(PokerTheme.muted)
             .lineLimit(1)
-            .accessibilityLabel("Offline practice uses simplified heads-up heuristics, not a GTO solver. Your score lasts for this session.")
+            .accessibilityLabel("Offline practice uses simplified heads-up heuristics, not a GTO solver. Your score lasts for this session. Topic accuracy is saved on this device.")
     }
 
     private func scenarioPanel(_ scenario: PracticeScenario, layout: PracticeLayout) -> some View {
@@ -111,7 +111,7 @@ import PokerCore
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(scenario.betting.amountToCall == 0 ? "Checked to you" : "Facing a bet")
+                Text(bettingContext(scenario.betting))
                     .foregroundStyle(scenario.betting.amountToCall == 0 ? PokerTheme.muted : PokerTheme.gold)
                 Spacer(minLength: 0)
                 Text(scenario.isPreflopAggressor ? "Aggressor: You" : "Aggressor: Not you")
@@ -158,6 +158,13 @@ import PokerCore
         .lineLimit(1)
     }
 
+    private func bettingContext(_ betting: BettingState) -> String {
+        guard betting.amountToCall > 0 else { return "Checked to you" }
+        if betting.opponentStack == 0 { return "Facing an all-in" }
+        if betting.heroStack <= betting.amountToCall { return "Call puts you all-in" }
+        return "Facing a bet"
+    }
+
     private func chipMetric(_ title: String, value: Double, identifier: String, layout: PracticeLayout) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(title)
@@ -196,9 +203,9 @@ import PokerCore
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             HStack(spacing: 8) {
-                choiceButton(.bet, layout: layout)
-                choiceButton(.check, layout: layout)
-                choiceButton(.fold, layout: layout)
+                ForEach(model.availableChoices) { choice in
+                    choiceButton(choice, layout: layout)
+                }
             }
         }
         .padding(layout.panelPadding)
@@ -210,10 +217,10 @@ import PokerCore
         Button { model.submit(choice) } label: {
             Text(choice.title)
                 .font(.system(size: layout.buttonFont, weight: .semibold))
-                .foregroundStyle(choice == .bet ? PokerTheme.background : choiceColor(choice))
+                .foregroundStyle(isAggressive(choice) ? PokerTheme.background : choiceColor(choice))
                 .frame(maxWidth: .infinity)
                 .frame(height: layout.buttonHeight)
-                .background(choice == .bet ? PokerTheme.green : PokerTheme.raised, in: RoundedRectangle(cornerRadius: 12))
+                .background(isAggressive(choice) ? PokerTheme.green : PokerTheme.raised, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(choiceColor(choice).opacity(0.4), lineWidth: 1))
                 .contentShape(RoundedRectangle(cornerRadius: 12))
         }
@@ -243,7 +250,7 @@ import PokerCore
                     .accessibilityLabel("You chose \(feedback.chosenChoice.title).")
             }
 
-            Text("Suggested: \(actionDescription(feedback.analysis.recommendation.action, pot: scenario.betting.pot))")
+            Text("Suggested: \(actionDescription(feedback.analysis.recommendation.action, choice: feedback.correctChoice, pot: scenario.betting.pot))")
                 .font(.system(size: layout.bodyFont, weight: .semibold))
                 .foregroundStyle(PokerTheme.text)
                 .fixedSize(horizontal: false, vertical: true)
@@ -256,6 +263,8 @@ import PokerCore
                 .accessibilityIdentifier("practice.explanation")
 
             Spacer(minLength: 0)
+
+            topicAccuracy(feedback, layout: layout)
 
             HStack(alignment: .top, spacing: 10) {
                 resultMetric("Texture", value: textureDescription(feedback.analysis.texture), identifier: "practice.texture", layout: layout)
@@ -281,6 +290,16 @@ import PokerCore
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(PokerTheme.surface, in: RoundedRectangle(cornerRadius: 18))
         .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(tint.opacity(0.5), lineWidth: 1))
+    }
+
+    private func topicAccuracy(_ feedback: PracticeFeedback, layout: PracticeLayout) -> some View {
+        let statistics = model.learningProgress.statistics(for: feedback.topic)
+        return Text("\(feedback.topic.title) · \(statistics.correct)/\(statistics.attempts) correct")
+            .font(.system(size: layout.captionFont, weight: .semibold).monospacedDigit())
+            .foregroundStyle(PokerTheme.gold)
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .accessibilityIdentifier("practice.topic")
     }
 
     private func resultMetric(_ title: String, value: String, identifier: String, layout: PracticeLayout) -> some View {
@@ -314,10 +333,15 @@ import PokerCore
 
     private func choiceColor(_ choice: PracticeChoice) -> Color {
         switch choice {
-        case .bet: PokerTheme.green
+        case .bet, .raise: PokerTheme.green
         case .check: PokerTheme.text
+        case .call: PokerTheme.gold
         case .fold: PokerTheme.red
         }
+    }
+
+    private func isAggressive(_ choice: PracticeChoice) -> Bool {
+        choice == .bet || choice == .raise
     }
 
     private func textureDescription(_ report: BoardTextureReport) -> String {
@@ -330,10 +354,10 @@ import PokerCore
         return report.isPaired ? "\(texture) · Paired" : texture
     }
 
-    private func actionDescription(_ action: PokerAction, pot: Double) -> String {
+    private func actionDescription(_ action: PokerAction, choice: PracticeChoice, pot: Double) -> String {
         switch action {
         case .bet(let amount): "Bet \(PokerFormat.chips(amount)) chips · \(PokerFormat.percent(amount / pot)) pot"
-        case .allIn(let amount): "Bet all in · \(PokerFormat.chips(amount)) chips"
+        case .allIn(let amount): "\(choice.title) all in · \(PokerFormat.chips(amount)) chips"
         case .check: "Check"
         case .fold: "Fold"
         case .call(let amount): "Call \(PokerFormat.chips(amount)) chips"

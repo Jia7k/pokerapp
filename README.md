@@ -50,8 +50,12 @@ The interface uses system typography and native SwiftUI controls, supports Dynam
 | `Sources/PokerCore/PostflopHeuristicEngine.swift` | Board texture, hero-owned made hands and ordered action rules |
 | `Sources/PokerCore/PokerViewModel.swift` | Main-actor observable inputs, validated card slots and derived analysis |
 | `Sources/PokerCore/PracticeScenario.swift` | Immutable drill inputs and optional curated fixtures |
-| `Sources/PokerCore/PracticeScenarioGenerator.swift` | Seedable, on-demand randomized face-card drills using Deck and the existing engine |
-| `Sources/PokerCore/PracticeViewModel.swift` | One-shot grading, feedback, unlimited progression and session score |
+| `Sources/PokerCore/PracticeScenarioGenerator.swift` | Seedable, balanced concept generation with extra practice for missed topics |
+| `Sources/PokerCore/PreparedPracticeScenario.swift` | Legal contextual actions and engine-backed validation |
+| `Sources/PokerCore/PracticeFeedbackBuilder.swift` | Numerical explanations of SPR, sizing and draw pricing |
+| `Sources/PokerCore/PracticeLearning.swift` | Bounded per-topic accuracy and adaptive review weights |
+| `Sources/PokerCore/PracticeViewModel.swift` | One-shot grading, adaptive progression and session score |
+| `Sources/PokerUI/PracticeProgressStore.swift` | Separate, versioned local storage for topic accuracy |
 
 ## Run and integrate
 
@@ -75,13 +79,17 @@ Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode
 
 ## Phase 4: practice
 
-Open **Practice** for unlimited randomized flop drills with two face cards. Each drill shuffles J/Q/K hole cards and draws a three-card flop from the remaining deck, then varies the pot, stacks, amount to call and preflop initiative. Use that context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** generates another drill; the heading simply reads **FLOP**, with no drill counter, ten-hand loop or session limit.
+Open **Practice** for unlimited randomized flop drills with two J/Q/K face cards. Each drill varies the cards, pot, stacks, amount to call and preflop initiative within a learning concept. When checked to, choose **Check / Bet**; when facing a wager, choose **Fold / Call / Raise**. Actions that stacks or the legal minimum prevent are omitted. Results reveal the engine's recommended sizing, numerical explanation, board texture, SPR, and saved accuracy for that topic. **Next Scenario** generates another drill; the heading simply reads **FLOP**, with no drill counter, ten-hand loop or session limit.
 
 Practice fits on one screen without scrolling. Cards, typography and spacing adapt to the available room; landscape uses two columns. Action buttons retain a minimum 44-point height, and full card and feedback descriptions remain available to VoiceOver.
 
-The score counts each displayed drill once and survives tab switches during the app session. It resets when the app restarts. Practice never replaces the live table's cards, stacks, bankroll or saved session.
+The score counts each displayed drill once and survives tab switches during the app session. It resets when the app restarts. Topic accuracy is saved separately on this device and continues across sessions. Practice never replaces the live table's cards, stacks, bankroll or saved session.
 
-Each generated input is evaluated with `PostflopHeuristicEngine` before presentation. Scenario definitions contain no answer table. `Card` provides card identities and `Deck` provides exclusion, shuffle and draw. Opening all-ins count as **Bet**; Call, Raise and all-in call/raise recommendations are excluded from this three-choice mode. Fold drills explicitly show an outstanding bet; selecting Check or Bet there is graded incorrect with a legality explanation. Sizing is taught in feedback, rather than scored as a separate input.
+Each generated input is evaluated with `PostflopHeuristicEngine` before presentation. Scenario definitions contain no answer table. `Card` provides card identities and `Deck` provides exclusion, shuffle and draw. Opening all-ins count as **Bet**; an all-in that only covers the call counts as **Call**, while an all-in above the call counts as **Raise**. Illegal or stale submissions never affect the score. Sizing is taught in feedback, rather than scored as a separate input.
+
+Each shuffled round covers continuation bets, checking, short stacks, value betting, draw pricing and facing bets. Up to three extra slots revisit topics with active mistake weights. Those weights fade as accuracy improves; all topics retain their regular coverage. Opponent wagers are calculated from the pot before the bet, then added to the displayed pot and deducted from the opponent's stack. This supports both ordinary wagers and deliberate overbets.
+
+Feedback explains the decisive calculation, such as `SPR 75/100 = 0.75`, or `9/47 = 19.1% next-card completion` versus a call requiring 25% equity. Closing all-in calls explicitly label the Rule-of-4 approximation. Draw completion is not win equity.
 
 ```swift
 import SwiftUI
@@ -98,7 +106,9 @@ struct TrainingScreen: View {
 }
 ```
 
-Use `PracticeViewModel(seed: 16)` to replay a generated session for testing. Normal sessions use system randomness. Inject an array through `PracticeViewModel(scenarios:)` for a curated sequence that cycles explicitly; the original ten drills remain available as fixtures, including K♠ Q♠ on A♥ 8♦ 2♣. Empty, malformed or unsupported fixtures show an unavailable state without awarding points or retaining stale advice. This module tests agreement with the app's simplified postflop heuristics; its grades are not solver-derived GTO judgments or opponent-range equity estimates.
+This standalone example keeps learning in memory. The app's `PokerRootView` restores and saves topic accuracy; other hosts can supply `progress:` and `onProgressChange:` to provide their own local persistence.
+
+Use `PracticeViewModel(seed: 16)` for reproducible generation; replay also requires the same initial learning progress and answer sequence because mistakes affect later rounds. Normal sessions use system randomness. Inject an array through `PracticeViewModel(scenarios:)` for a curated sequence that cycles explicitly; the original ten drills remain available as fixtures, including K♠ Q♠ on A♥ 8♦ 2♣. Empty, malformed or unsupported fixtures show an unavailable state without awarding points or retaining stale advice. This module tests agreement with the app's simplified postflop heuristics; its grades are not solver-derived GTO judgments or opponent-range equity estimates.
 
 The current native verification target is **iPhone 16 Pro**, in portrait and landscape, including the largest system text setting.
 

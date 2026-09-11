@@ -4,13 +4,14 @@ import XCTest
 final class PokerPracticeUITests: XCTestCase {
     private var app: XCUIApplication!
 
-    private func launchPractice(accessibilityText: Bool = false) {
+    private func launchPractice(accessibilityText: Bool = false, resetState: Bool = true, seed: UInt64 = 16) {
         continueAfterFailure = false
         app = XCUIApplication()
         app.launchArguments = [
-            "--ui-testing", "--reset-state", "--practice-seed", "16",
+            "--ui-testing", "--practice-seed", String(seed),
             "-AppleLanguages", "(en)", "-AppleLocale", "en_US"
         ]
+        if resetState { app.launchArguments.append("--reset-state") }
         if accessibilityText {
             app.launchArguments += [
                 "-UIPreferredContentSizeCategoryName",
@@ -23,30 +24,33 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertTrue(practiceTab.waitForExistence(timeout: 4))
         practiceTab.tap()
         XCTAssertTrue(element("practice.score").waitForExistence(timeout: 3))
+        XCTAssertFalse(offeredChoiceIDs.isEmpty)
     }
 
     func testGradingNextAndScoreRetention() {
         launchPractice()
         XCTAssertEqual(element("practice.score").label, "Correct: 0/0")
         XCTAssertTrue(element("practice.hole.0").label.contains("Queen of spades"))
-        XCTAssertTrue(element("practice.hole.1").label.contains("Jack of hearts"))
+        XCTAssertTrue(element("practice.hole.1").label.contains("Queen of diamonds"))
         XCTAssertFalse(element("practice.result").exists)
         XCTAssertFalse(element("practice.texture").exists)
         XCTAssertFalse(element("practice.spr").exists)
         assertQuestionFits()
         attachScreenshot(named: "practice-16pro-question")
 
-        for id in ["practice.bet", "practice.check", "practice.fold"] {
+        for id in offeredChoiceIDs {
             assertFullyVisible(app.buttons[id])
         }
         attachScreenshot(named: "practice-16pro-choices")
-        // Seed 16 starts with Qs Jh on 8s Ad 7d, facing 40 into an 80-chip pot.
-        tapPracticeButton("practice.fold")
+        // Seed 16 starts with a set of queens, checked to in an 80-chip pot.
+        tapPracticeButton("practice.bet")
         assertPracticeLabel("CORRECT", id: "practice.result")
         assertPracticeLabel("Correct: 1/1", id: "practice.score")
         XCTAssertFalse(app.buttons["practice.bet"].exists)
         XCTAssertFalse(app.buttons["practice.check"].exists)
         XCTAssertFalse(app.buttons["practice.fold"].exists)
+        XCTAssertFalse(app.buttons["practice.call"].exists)
+        XCTAssertFalse(app.buttons["practice.raise"].exists)
         assertFullyVisible(element("practice.explanation"))
         XCTAssertFalse(element("practice.explanation").label.isEmpty)
         assertFullyVisible(element("practice.spr"))
@@ -57,7 +61,7 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertFalse(element("practice.texture").exists)
         assertPracticeLabel("Correct: 1/1", id: "practice.score")
 
-        // The next generated drill also faces a wager; Check is not a legal action.
+        // The next generated drill is a dry-board continuation bet; Check disagrees with the rule.
         tapPracticeButton("practice.check")
         assertPracticeLabel("INCORRECT", id: "practice.result")
         assertPracticeLabel("Correct: 1/2", id: "practice.score")
@@ -89,7 +93,7 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertTrue(secondLabel.contains("7 of diamonds"))
 
         app.tabBars.buttons["Practice"].tap()
-        tapPracticeButton("practice.bet")
+        tapPracticeButton(offeredChoiceIDs[0])
         tapPracticeButton("practice.next")
         app.tabBars.buttons["Table"].tap()
         XCTAssertTrue(scrollIntoView(firstCard, in: dashboard))
@@ -101,7 +105,9 @@ final class PokerPracticeUITests: XCTestCase {
         launchPractice(accessibilityText: true)
         var deals = Set<String>()
         var pots = Set<String>()
-        var capturedFacingBet = false
+        var topics = Set<String>()
+        var sawFacingBet = false
+        var correctAnswers = 0
         for index in 0..<12 {
             assertPracticeLabel("Flop", id: "practice.progress")
             let deal = ["practice.hole.0", "practice.hole.1", "practice.flop.0",
@@ -110,48 +116,114 @@ final class PokerPracticeUITests: XCTestCase {
             pots.insert(element("practice.pot").label)
             assertQuestionFits()
             if index == 0 { attachScreenshot(named: "practice-16pro-accessibility-choices") }
-            // Also exercises the longest legality prefix on a facing-bet drill.
-            tapPracticeButton("practice.bet")
+            let choices = offeredChoiceIDs
+            if app.buttons["practice.call"].exists { sawFacingBet = true }
+            tapPracticeButton(index == 3 ? "practice.call" : choices[index % choices.count])
             assertFeedbackFits()
+            if index == 3 {
+                XCTAssertEqual(element("practice.result").label, "CORRECT")
+                XCTAssertTrue(element("practice.recommendation").label.contains("Call 112.5"))
+                attachScreenshot(named: "practice-16pro-call-feedback")
+            }
+            if index == 5 {
+                XCTAssertEqual(element("practice.result").label, "CORRECT")
+                XCTAssertTrue(element("practice.recommendation").label.contains("Call all in"))
+                attachScreenshot(named: "practice-16pro-all-in-call")
+            }
+            let topic = element("practice.topic").label.components(separatedBy: " · ")[0]
+            topics.insert(topic)
+            if element("practice.result").label == "CORRECT" { correctAnswers += 1 }
             if index == 0 { attachScreenshot(named: "practice-16pro-accessibility-feedback") }
-            if index == 8 { attachScreenshot(named: "practice-16pro-value-bet") }
-            if !capturedFacingBet && element("practice.explanation").label.hasPrefix("A bet is already outstanding") {
-                attachScreenshot(named: "practice-16pro-long-feedback")
-                capturedFacingBet = true
+            if topic == "Value betting" { attachScreenshot(named: "practice-16pro-value-bet") }
+            if topic == "Draw pricing" {
+                attachScreenshot(named: "practice-16pro-draw-feedback")
             }
             tapPracticeButton("practice.next")
         }
         XCTAssertEqual(element("practice.progress").label, "Flop")
-        XCTAssertEqual(element("practice.score").label, "Correct: 1/12")
+        XCTAssertEqual(element("practice.score").label, "Correct: \(correctAnswers)/12")
         XCTAssertGreaterThan(pots.count, 1)
-        XCTAssertTrue(capturedFacingBet)
+        XCTAssertTrue(sawFacingBet)
+        XCTAssertEqual(topics, Set(["Continuation bets", "Checking", "Short stacks", "Value betting", "Draw pricing", "Facing bets"]))
     }
 
     func testLandscapeQuestionAndFeedbackFitWithoutScrolling() {
-        launchPractice(accessibilityText: true)
+        launchPractice(accessibilityText: true, seed: 33)
         XCUIDevice.shared.orientation = .landscapeLeft
         defer { XCUIDevice.shared.orientation = .portrait }
         let landscape = NSPredicate { _, _ in self.app.frame.width > self.app.frame.height }
         XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: app)], timeout: 5), .completed)
         assertQuestionFits()
         attachScreenshot(named: "practice-16pro-landscape-question")
-        tapPracticeButton("practice.bet")
+        tapPracticeButton("practice.call")
+        assertPracticeLabel("CORRECT", id: "practice.result")
+        XCTAssertTrue(element("practice.explanation").label.contains("Rule of 4"))
         assertFeedbackFits()
         attachScreenshot(named: "practice-16pro-landscape-feedback")
         tapPracticeButton("practice.next")
         assertQuestionFits()
     }
 
+    func testAllInRaiseIsOfferedAndGradedAsRaise() {
+        launchPractice(accessibilityText: true, seed: 1)
+        XCTAssertEqual(offeredChoiceIDs, ["practice.fold", "practice.call", "practice.raise"])
+        assertQuestionFits()
+        attachScreenshot(named: "practice-16pro-raise-question")
+        tapPracticeButton("practice.raise")
+        assertPracticeLabel("CORRECT", id: "practice.result")
+        XCTAssertTrue(element("practice.recommendation").label.contains("Raise all in"))
+        XCTAssertTrue(element("practice.explanation").label.contains("300/750 = 0.4"))
+        assertFeedbackFits()
+        attachScreenshot(named: "practice-16pro-all-in-raise")
+    }
+
+    func testTopicAccuracySurvivesRelaunchWithAFreshSessionScore() {
+        launchPractice()
+        tapPracticeButton(offeredChoiceIDs[0])
+        let savedTopic = element("practice.topic").label.components(separatedBy: " · ")[0]
+        XCTAssertTrue(element("practice.topic").label.hasSuffix("/1 correct"))
+        app.terminate()
+        launchPractice(resetState: false)
+        assertPracticeLabel("Correct: 0/0", id: "practice.score")
+        for _ in 0..<9 {
+            tapPracticeButton(offeredChoiceIDs[0])
+            let label = element("practice.topic").label
+            if label.hasPrefix(savedTopic + " · ") {
+                XCTAssertTrue(label.hasSuffix("/2 correct"), "Saved topic accuracy must survive relaunch: \(label)")
+                return
+            }
+            tapPracticeButton("practice.next")
+        }
+        XCTFail("The balanced round did not revisit the saved topic")
+    }
+
+    private var offeredChoiceIDs: [String] {
+        ["practice.check", "practice.bet", "practice.fold", "practice.call", "practice.raise"]
+            .filter { app.buttons[$0].exists }
+    }
+
     private func assertQuestionFits() {
         XCTAssertEqual(app.scrollViews.count, 0, "Practice must fit without a scroll view")
         for id in ["practice.score", "practice.progress", "practice.hole.0", "practice.hole.1",
                    "practice.flop.0", "practice.flop.1", "practice.flop.2", "practice.pot",
-                   "practice.effectiveStack", "practice.toCall", "practice.aggressor",
-                   "practice.bet", "practice.check", "practice.fold"] {
+                   "practice.effectiveStack", "practice.toCall", "practice.aggressor"] {
             assertFullyVisible(element(id))
+        }
+        let choices = offeredChoiceIDs
+        XCTAssertGreaterThanOrEqual(choices.count, 2)
+        for id in choices { assertFullyVisible(app.buttons[id]) }
+        if app.buttons["practice.call"].exists {
+            XCTAssertTrue(app.buttons["practice.fold"].exists)
+            XCTAssertFalse(app.buttons["practice.check"].exists)
+            XCTAssertFalse(app.buttons["practice.bet"].exists)
+        } else {
+            XCTAssertTrue(app.buttons["practice.check"].exists)
+            XCTAssertFalse(app.buttons["practice.fold"].exists)
+            XCTAssertFalse(app.buttons["practice.raise"].exists)
         }
         XCTAssertFalse(element("practice.texture").exists)
         XCTAssertFalse(element("practice.spr").exists)
+        XCTAssertFalse(element("practice.topic").exists)
     }
 
     private func assertFeedbackFits() {
@@ -159,7 +231,7 @@ final class PokerPracticeUITests: XCTestCase {
         for id in ["practice.hole.0", "practice.hole.1", "practice.flop.0", "practice.flop.1",
                    "practice.flop.2", "practice.pot", "practice.effectiveStack", "practice.toCall",
                    "practice.aggressor", "practice.result", "practice.recommendation", "practice.explanation", "practice.texture",
-                   "practice.spr", "practice.next"] {
+                   "practice.spr", "practice.topic", "practice.next"] {
             assertFullyVisible(element(id))
         }
     }

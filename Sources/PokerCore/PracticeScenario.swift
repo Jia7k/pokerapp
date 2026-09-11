@@ -1,11 +1,13 @@
 public enum PracticeChoice: String, CaseIterable, Identifiable, Sendable {
-    case bet, check, fold
+    case bet, check, fold, call, raise
     public var id: String { rawValue }
     public var title: String {
         switch self {
         case .bet: "Bet"
         case .check: "Check"
         case .fold: "Fold"
+        case .call: "Call"
+        case .raise: "Raise"
         }
     }
 }
@@ -16,13 +18,18 @@ public struct PracticeScenario: Identifiable, Equatable, Sendable {
     public let flop: [Card]
     public let betting: BettingState
     public let isPreflopAggressor: Bool
+    public let topic: PracticeTopic?
 
-    public init(id: String, holeCards: [Card], flop: [Card], betting: BettingState, isPreflopAggressor: Bool) {
+    public init(
+        id: String, holeCards: [Card], flop: [Card], betting: BettingState,
+        isPreflopAggressor: Bool, topic: PracticeTopic? = nil
+    ) {
         self.id = id
         self.holeCards = holeCards
         self.flop = flop
         self.betting = betting
         self.isPreflopAggressor = isPreflopAggressor
+        self.topic = topic
     }
 }
 
@@ -114,4 +121,5 @@ public struct PracticeFeedback: Equatable, Sendable {
     public let isCorrect: Bool
     public let analysis: PostflopAnalysis
     public let explanation: String
+    public let topic: PracticeTopic
 }

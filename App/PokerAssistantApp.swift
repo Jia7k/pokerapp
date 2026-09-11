@@ -9,6 +9,7 @@ struct PokerAssistantApp: App {
 
     @State private var session: PokerSession
     private let practiceSeed: UInt64?
+    private let practiceDefaults: UserDefaults
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
@@ -34,12 +35,13 @@ struct PokerAssistantApp: App {
             defaults = .standard
         }
 
+        practiceDefaults = defaults
         _session = State(initialValue: PokerSession(defaults: defaults))
     }
 
     var body: some Scene {
         WindowGroup {
-            PokerRootView(session: session, practiceSeed: practiceSeed)
+            PokerRootView(session: session, practiceSeed: practiceSeed, practiceDefaults: practiceDefaults)
                 .preferredColorScheme(.dark)
         }
     }

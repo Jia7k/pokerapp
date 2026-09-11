@@ -27,7 +27,8 @@ final class PracticeViewModelTests: XCTestCase {
             XCTAssertEqual(result.correctChoice, .bet)
             XCTAssertEqual(result.analysis.recommendation.action, .bet(amount: 33))
             XCTAssertEqual(result.analysis.recommendation.reason, .dryBoardContinuationBet)
-            XCTAssertTrue(result.explanation.contains(result.analysis.recommendation.explanation))
+            XCTAssertTrue(result.explanation.contains("33"))
+            XCTAssertTrue(result.explanation.contains("33%"))
             XCTAssertEqual(model.correctCount, 1)
             XCTAssertEqual(model.attemptCount, 1)
             XCTAssertFalse(model.canAnswer)
@@ -37,10 +38,10 @@ final class PracticeViewModelTests: XCTestCase {
     func testWrongAnswerRetainsChosenActionAndDoesNotEarnPoint() async throws {
         try await MainActor.run {
             let model = PracticeViewModel(scenarios: [drill()])
-            model.submit(.fold)
+            model.submit(.check)
             let result = try XCTUnwrap(model.feedback)
             XCTAssertFalse(result.isCorrect)
-            XCTAssertEqual(result.chosenChoice, .fold)
+            XCTAssertEqual(result.chosenChoice, .check)
             XCTAssertEqual(result.correctChoice, .bet)
             XCTAssertEqual(model.correctCount, 0)
             XCTAssertEqual(model.attemptCount, 1)
@@ -91,7 +92,7 @@ final class PracticeViewModelTests: XCTestCase {
         }
     }
 
-    func testIllegalCheckOrNewBetFacingWagerGetsExplanatoryIncorrectFeedback() async throws {
+    func testUnavailableCheckOrNewBetFacingWagerDoesNotScore() async throws {
         try await MainActor.run {
             for choice in [PracticeChoice.check, .bet] {
                 let model = PracticeViewModel(scenarios: [drill(
@@ -99,11 +100,12 @@ final class PracticeViewModelTests: XCTestCase {
                     hero: 500, opponent: 450, aggressor: false
                 )])
                 model.submit(choice)
+                XCTAssertNil(model.feedback)
+                XCTAssertEqual(model.attemptCount, 0)
+                model.submit(.fold)
                 let result = try XCTUnwrap(model.feedback)
-                XCTAssertFalse(result.isCorrect)
+                XCTAssertTrue(result.isCorrect)
                 XCTAssertEqual(result.correctChoice, .fold)
-                XCTAssertTrue(result.explanation.contains(result.analysis.recommendation.explanation))
-                XCTAssertNotEqual(result.explanation, result.analysis.recommendation.explanation)
                 XCTAssertEqual(model.attemptCount, 1)
             }
         }
@@ -112,7 +114,7 @@ final class PracticeViewModelTests: XCTestCase {
     func testRepeatedSubmissionCannotChangeFeedbackOrScore() async {
         await MainActor.run {
             let model = PracticeViewModel(scenarios: [drill()])
-            model.submit(.fold)
+            model.submit(.check)
             let firstResult = model.feedback
             model.submit(.bet)
             model.submit(.check)
@@ -198,30 +200,34 @@ final class PracticeViewModelTests: XCTestCase {
         }
     }
 
-    func testCallsRaisesAndFacingBetAllInsAreNotMislabeledAsBet() async throws {
+    func testCallsRaisesAndFacingBetAllInsMapToTheActualLegalAction() async throws {
         try await MainActor.run {
-            let unsupported: [(PracticeScenario, PokerAction)] = [
+            let fixtures: [(PracticeScenario, PokerAction, PracticeChoice)] = [
                 (drill(hole: "Qs Js", flop: "Kh Tc 3d", pot: 200, call: 25,
-                       hero: 500, opponent: 475, aggressor: false), .call(amount: 25)),
+                       hero: 500, opponent: 475, aggressor: false), .call(amount: 25), .call),
                 (drill(hole: "Kc Qh", flop: "Kd 8s 2c", call: 10,
-                       hero: 500, opponent: 20, aggressor: false), .raise(to: 30)),
+                       hero: 500, opponent: 20, aggressor: false), .raise(to: 30), .raise),
                 (drill(hole: "Kc Qh", flop: "Kd 8s 2c", call: 50,
-                       hero: 25, opponent: 400, aggressor: false), .allIn(amount: 25)),
+                       hero: 25, opponent: 400, aggressor: false), .allIn(amount: 25), .call),
                 (drill(hole: "Kc Qh", flop: "Kd 8s 2c", pot: 200, call: 50,
-                       hero: 100, opponent: 400, aggressor: false), .allIn(amount: 100))
+                       hero: 100, opponent: 400, aggressor: false), .allIn(amount: 100), .raise)
             ]
-            for (scenario, expectedAction) in unsupported {
+            for (scenario, expectedAction, expectedChoice) in fixtures {
                 let analysis = try PostflopHeuristicEngine.analyze(
                     holeCards: scenario.holeCards, board: scenario.flop,
                     betting: scenario.betting, isPreflopAggressor: scenario.isPreflopAggressor
                 )
                 XCTAssertEqual(analysis.recommendation.action, expectedAction)
                 let model = PracticeViewModel(scenarios: [scenario])
-                XCTAssertNil(model.currentScenario)
-                XCTAssertNotNil(model.errorMessage)
+                XCTAssertEqual(model.currentScenario, scenario)
+                XCTAssertNil(model.errorMessage)
                 model.submit(.bet)
                 XCTAssertNil(model.feedback)
                 XCTAssertEqual(model.attemptCount, 0)
+                model.submit(expectedChoice)
+                XCTAssertTrue(try XCTUnwrap(model.feedback).isCorrect)
+                XCTAssertEqual(model.feedback?.correctChoice, expectedChoice)
+                XCTAssertEqual(model.attemptCount, 1)
             }
         }
     }
