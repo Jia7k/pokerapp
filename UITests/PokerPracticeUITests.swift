@@ -17,6 +17,7 @@ final class PokerPracticeUITests: XCTestCase {
                 "UICTContentSizeCategoryAccessibilityXXXL"
             ]
         }
+        XCUIDevice.shared.orientation = .portrait
         app.launch()
         let practiceTab = app.tabBars.buttons["Practice"]
         XCTAssertTrue(practiceTab.waitForExistence(timeout: 4))
@@ -32,10 +33,11 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertFalse(element("practice.result").exists)
         XCTAssertFalse(element("practice.texture").exists)
         XCTAssertFalse(element("practice.spr").exists)
+        assertQuestionFits()
         attachScreenshot(named: "practice-question")
 
         for id in ["practice.bet", "practice.check", "practice.fold"] {
-            XCTAssertTrue(scrollIntoView(app.buttons[id]))
+            assertFullyVisible(app.buttons[id])
         }
         attachScreenshot(named: "practice-choices")
         tapPracticeButton("practice.bet")
@@ -44,9 +46,9 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["practice.bet"].exists)
         XCTAssertFalse(app.buttons["practice.check"].exists)
         XCTAssertFalse(app.buttons["practice.fold"].exists)
-        XCTAssertTrue(scrollIntoView(element("practice.explanation")))
+        assertFullyVisible(element("practice.explanation"))
         XCTAssertFalse(element("practice.explanation").label.isEmpty)
-        XCTAssertTrue(scrollIntoView(element("practice.spr")))
+        assertFullyVisible(element("practice.spr"))
         attachScreenshot(named: "practice-correct")
 
         tapPracticeButton("practice.next")
@@ -58,7 +60,7 @@ final class PokerPracticeUITests: XCTestCase {
         tapPracticeButton("practice.check")
         assertPracticeLabel("INCORRECT", id: "practice.result")
         assertPracticeLabel("Correct: 1/2", id: "practice.score")
-        XCTAssertTrue(scrollIntoView(app.buttons["practice.next"]))
+        assertFeedbackFits()
         attachScreenshot(named: "practice-incorrect")
 
         app.tabBars.buttons["Table"].tap()
@@ -94,20 +96,78 @@ final class PokerPracticeUITests: XCTestCase {
         XCTAssertEqual(app.buttons["card.hole.1"].label, secondLabel)
     }
 
-    func testAccessibilityTextKeepsAllChoicesAndNextReachable() {
+    func testEveryScenarioFitsWithoutScrollingAtLargestTextSize() {
         launchPractice(accessibilityText: true)
-        for id in ["practice.bet", "practice.check", "practice.fold"] {
-            XCTAssertTrue(scrollIntoView(app.buttons[id]), "\(id) must remain reachable at the largest text size")
+        let choices = ["bet", "check", "bet", "check", "check", "bet", "check", "check", "bet", "check"]
+        for (index, choice) in choices.enumerated() {
+            assertQuestionFits()
+            if index == 0 { attachScreenshot(named: "practice-accessibility-choices") }
+            tapPracticeButton("practice.\(choice)")
+            assertFeedbackFits()
+            if index == 0 { attachScreenshot(named: "practice-accessibility-feedback") }
+            if index == 7 { attachScreenshot(named: "practice-long-feedback") }
+            tapPracticeButton("practice.next")
         }
-        attachScreenshot(named: "practice-accessibility-choices")
+        XCTAssertEqual(element("practice.progress").label, "Flop 1 of 10")
+        XCTAssertTrue(element("practice.score").label.hasSuffix("/10"))
+    }
+
+    func testLandscapeQuestionAndFeedbackFitWithoutScrolling() {
+        launchPractice(accessibilityText: true)
+        XCUIDevice.shared.orientation = .landscapeLeft
+        defer { XCUIDevice.shared.orientation = .portrait }
+        let landscape = NSPredicate { _, _ in self.app.frame.width > self.app.frame.height }
+        XCTAssertEqual(XCTWaiter.wait(for: [XCTNSPredicateExpectation(predicate: landscape, object: app)], timeout: 5), .completed)
+        assertQuestionFits()
+        attachScreenshot(named: "practice-landscape-question")
         tapPracticeButton("practice.bet")
-        assertPracticeLabel("CORRECT", id: "practice.result")
-        XCTAssertTrue(scrollIntoView(element("practice.explanation")))
-        attachScreenshot(named: "practice-accessibility-feedback")
+        assertFeedbackFits()
+        attachScreenshot(named: "practice-landscape-feedback")
         tapPracticeButton("practice.next")
-        XCTAssertFalse(element("practice.result").exists)
-        XCTAssertTrue(scrollIntoView(app.buttons["practice.bet"]))
-        assertPracticeLabel("Correct: 1/1", id: "practice.score")
+        assertQuestionFits()
+    }
+
+    private func assertQuestionFits() {
+        XCTAssertEqual(app.scrollViews.count, 0, "Practice must fit without a scroll view")
+        for id in ["practice.score", "practice.progress", "practice.hole.0", "practice.hole.1",
+                   "practice.flop.0", "practice.flop.1", "practice.flop.2", "practice.pot",
+                   "practice.effectiveStack", "practice.toCall", "practice.aggressor",
+                   "practice.bet", "practice.check", "practice.fold"] {
+            assertFullyVisible(element(id))
+        }
+        XCTAssertFalse(element("practice.texture").exists)
+        XCTAssertFalse(element("practice.spr").exists)
+    }
+
+    private func assertFeedbackFits() {
+        XCTAssertEqual(app.scrollViews.count, 0)
+        for id in ["practice.hole.0", "practice.hole.1", "practice.flop.0", "practice.flop.1",
+                   "practice.flop.2", "practice.pot", "practice.effectiveStack", "practice.toCall",
+                   "practice.aggressor", "practice.result", "practice.recommendation", "practice.explanation", "practice.texture",
+                   "practice.spr", "practice.next"] {
+            assertFullyVisible(element(id))
+        }
+    }
+
+    private func assertFullyVisible(_ target: XCUIElement, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertTrue(target.exists || target.waitForExistence(timeout: 2), "Missing \(target.identifier)", file: file, line: line)
+        guard target.exists else { return }
+        let frame = target.frame
+        let window = app.frame
+        let tabBar = app.tabBars.firstMatch
+        let bottom = tabBar.exists ? min(window.maxY, tabBar.frame.minY) : window.maxY
+        let statusBar = app.statusBars.firstMatch
+        let top = statusBar.exists ? max(window.minY, statusBar.frame.maxY) : window.minY
+        XCTAssertGreaterThan(frame.width, 0, file: file, line: line)
+        XCTAssertGreaterThan(frame.height, 0, file: file, line: line)
+        XCTAssertGreaterThanOrEqual(frame.minY, top - 1, "\(target.identifier) clips above the screen", file: file, line: line)
+        XCTAssertLessThanOrEqual(frame.maxY, bottom + 1, "\(target.identifier) extends under the tab bar", file: file, line: line)
+        XCTAssertGreaterThanOrEqual(frame.minX, window.minX - 1, file: file, line: line)
+        XCTAssertLessThanOrEqual(frame.maxX, window.maxX + 1, file: file, line: line)
+        XCTAssertTrue(target.isHittable, "\(target.identifier) is not accessible without scrolling", file: file, line: line)
+        if target.elementType == .button {
+            XCTAssertGreaterThanOrEqual(frame.height, 44, "Preserve a 44-point tap target", file: file, line: line)
+        }
     }
 
     private func element(_ id: String) -> XCUIElement {
@@ -116,19 +176,18 @@ final class PokerPracticeUITests: XCTestCase {
 
     private func tapPracticeButton(_ id: String) {
         let button = app.buttons[id]
-        XCTAssertTrue(scrollIntoView(button), "Expected \(id) to be reachable")
+        assertFullyVisible(button)
         button.tap()
     }
 
     private func assertPracticeLabel(_ expected: String, id: String) {
         let target = element(id)
-        XCTAssertTrue(scrollIntoView(target))
+        assertFullyVisible(target)
         XCTAssertEqual(target.label, expected)
     }
 
     @discardableResult
-    private func scrollIntoView(_ target: XCUIElement, in container: XCUIElement? = nil) -> Bool {
-        let scroll = container ?? app.scrollViews["practice.scroll"]
+    private func scrollIntoView(_ target: XCUIElement, in scroll: XCUIElement) -> Bool {
         for _ in 0..<24 {
             let viewport = unobscuredViewport(of: scroll)
             let exists = target.exists
@@ -168,7 +227,7 @@ final class PokerPracticeUITests: XCTestCase {
     }
 
     private func attachScreenshot(named name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)

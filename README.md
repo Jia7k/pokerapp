@@ -76,6 +76,8 @@ Run the native UI journeys with Product → Test in the **PokerAssistant** Xcode
 
 Open **Practice** to work through ten flop drills with two face cards. The first deals **K♠ Q♠** on **A♥ 8♦ 2♣**, a pot of 100 and an effective stack of 400. Use the cards, pot, stack, amount to call and preflop-aggressor context to choose **Bet**, **Check** or **Fold**. Results reveal the engine's recommended sizing, explanation, board texture and SPR. **Next Scenario** advances through the bank and cycles after the tenth hand.
 
+Practice fits on one screen without scrolling. Cards, typography and spacing adapt to the available room; landscape uses two columns. Action buttons retain a minimum 44-point height, and full card and feedback descriptions remain available to VoiceOver.
+
 The score counts each displayed drill once and survives tab switches during the app session. It resets when the app restarts. Practice never replaces the live table's cards, stacks, bankroll or saved session.
 
 `PracticeViewModel` evaluates each input with `PostflopHeuristicEngine`. Scenario definitions contain no answer table. `Card` provides card identities and `Deck.remaining(excluding:)` validates uniqueness. Opening all-ins count as **Bet**; Call, Raise and all-in call/raise recommendations are excluded from this three-choice bank. Fold drills explicitly show an outstanding bet; selecting Check or Bet there is graded incorrect with a legality explanation. Sizing is taught in feedback, rather than scored as a separate input.
