@@ -4,6 +4,35 @@ A native SwiftUI Texas Hold’em assistant with an offline Swift engine, hardcod
 
 Requires Swift 6 / Xcode 16 or later. The iPhone/iPad app targets iOS 17+. Portable engine and session tests also run on macOS 14+.
 
+## App screenshots
+
+Practice on the iPhone 16 Pro simulator. Unlimited offline drills fit on one screen, with legal actions, numerical feedback and saved topic accuracy.
+
+<table>
+  <tr>
+    <th>Checked to you</th>
+    <th>Facing a wager</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/practice-16pro-question.png" width="300" alt="Riverline practice drill showing hole cards, flop, pot, effective stack, and Check and Bet buttons." /></td>
+    <td><img src="docs/screenshots/practice-16pro-raise-question.png" width="300" alt="Riverline practice drill facing a bet with Fold, Call and Raise buttons." /></td>
+  </tr>
+  <tr>
+    <th>Short-stack feedback</th>
+    <th>Draw pricing</th>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/practice-16pro-all-in-raise.png" width="300" alt="Correct all-in raise with top pair, the SPR calculation, saved topic accuracy and Next Scenario." /></td>
+    <td><img src="docs/screenshots/practice-16pro-draw-feedback.png" width="300" alt="Correct fold with a flush draw, comparing approximate draw completion with required equity from pot odds." /></td>
+  </tr>
+</table>
+
+<details>
+  <summary>Landscape layout</summary>
+  <p>The cards and feedback sit side by side without scrolling.</p>
+  <img src="docs/screenshots/practice-16pro-landscape-feedback.png" width="850" alt="Riverline in landscape showing the flop and pot beside complete draw-pricing feedback and the Next Scenario button." />
+</details>
+
 ## Run the iOS app
 
 1. Open `PokerAssistant.xcodeproj` in Xcode.
